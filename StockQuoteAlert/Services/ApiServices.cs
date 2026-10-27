@@ -20,7 +20,7 @@ public class ApiServices
     // Optional CancellationToken so the call can be interrupted
     public async Task<Stock> GetQuoteAsync(string symbol, CancellationToken ct = default)
     {
-        // Validate before the request: avoids a waste API quota.
+        // Validate before the request: avoids wasting API quota.
         if (string.IsNullOrWhiteSpace(symbol))
         {
             throw new ArgumentException("The stock symbol cannot be empty.", nameof(symbol));
@@ -28,7 +28,7 @@ public class ApiServices
 
         var raw = await _api.GetRawQuoteAsync(symbol, ct);
 
-        // Deserializing int a class to validate the fields
+        // Parse the JSON document to validate each field before using it.
         using var document = JsonDocument.Parse(raw);
 
         // The API returns "results" as an array even for a single ticker.
@@ -42,7 +42,7 @@ public class ApiServices
         // We request a single symbol, so the first item is the one we want.
         var result = results[0];
 
-        // Use the symbol returned by the API, not the one requested,
+        // Use the symbol returned by the API, not the one requested.
         if (!result.TryGetProperty("symbol", out var symbolElement) ||
             symbolElement.ValueKind != JsonValueKind.String ||
             string.IsNullOrWhiteSpace(symbolElement.GetString()))

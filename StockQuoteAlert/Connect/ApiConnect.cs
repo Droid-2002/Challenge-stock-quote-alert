@@ -57,7 +57,7 @@ public class ApiConnect
                 new AuthenticationHeaderValue("Bearer", _settings.Token);
         }
 
-        // Response is disposed by the caller, so it can read the content stream.
+        // The response is disposed at the end of this method, after the content is read.
         using var response = await _http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
 

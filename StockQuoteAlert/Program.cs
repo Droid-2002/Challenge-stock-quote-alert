@@ -3,39 +3,52 @@ using StockQuoteAlert.Connect;
 using StockQuoteAlert.Interfaces;
 using StockQuoteAlert.Services;
 
+// Ctrl+C cancels the token instead of killing the process, so the loop ends cleanly.
+using var cts = new CancellationTokenSource();
+Console.CancelKeyPress += (_, e) =>
+{
+    e.Cancel = true;
+    cts.Cancel();
+};
+
 try
 {
+    var parameters = AlertParameters.Parse(args);
+
     var configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
     var config = AppConfig.Load(configPath);
 
-    var symbol = args.Length > 0 ? args[0] : "PETR4";
+    var apiServices = new ApiServices(new ApiConnect(config.Api));
+    var emailServices = new EmailServices(new EmailConnect(config.Smtp), config.Email);
+    var monitor = new MonitorServices(apiServices, emailServices, parameters, config.Api.IntervalSeconds);
 
-    var apiConnect = new ApiConnect(config.Api);
-    var apiServices = new ApiServices(apiConnect);
+    Console.WriteLine(
+        $"Monitoring {parameters.Symbol} every {config.Api.IntervalSeconds}s. " +
+        $"Sell above {parameters.SellPrice:F2}, buy below {parameters.BuyPrice:F2}. Ctrl+C to exit.");
 
-    var stock = await apiServices.GetQuoteAsync(symbol);
-
-    Console.WriteLine($"Symbol: {stock.Symbol}");
-    Console.WriteLine($"Price: {stock.Price:F2}");
-    Console.WriteLine($"Updated at: {stock.UpdatedAt:O}");
+    await monitor.RunAsync(cts.Token);
+}
+catch (OperationCanceledException) when (cts.IsCancellationRequested)
+{
+    Console.WriteLine("Monitoring ended.");
 }
 catch (ArgumentException ex)
 {
-    Console.Error.WriteLine($"Invalid configuration or argument: {ex.Message}");
+    Console.Error.WriteLine($"Invalid parameters or configuration: {ex.Message}");
     Environment.ExitCode = 1;
 }
-catch (HttpRequestException ex)
+catch (FileNotFoundException ex)
 {
-    Console.Error.WriteLine($"The quote request failed: {ex.Message}");
-    Environment.ExitCode = 1;
-}
-catch (InvalidOperationException ex)
-{
-    Console.Error.WriteLine($"The API returned invalid quote data: {ex.Message}");
+    Console.Error.WriteLine(ex.Message);
     Environment.ExitCode = 1;
 }
 catch (JsonException ex)
 {
-    Console.Error.WriteLine($"The API returned invalid JSON: {ex.Message}");
+    Console.Error.WriteLine($"The appsettings.json file is not valid JSON: {ex.Message}");
+    Environment.ExitCode = 1;
+}
+catch (InvalidOperationException ex)
+{
+    Console.Error.WriteLine($"Error reading the configuration: {ex.Message}");
     Environment.ExitCode = 1;
 }
