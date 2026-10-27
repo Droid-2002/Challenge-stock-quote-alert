@@ -34,24 +34,24 @@ public class EmailServices
 
     public Task SendBuyAlertAsync(Stock stock, decimal buyPrice, CancellationToken ct = default)
     {
-        var subject = $"[StockQuoteAlert] Compra: {stock.Symbol}";
+        var subject = $"[StockQuoteAlert] Buy: {stock.Symbol}";
         var body =
-            $"O ativo {stock.Symbol} esta cotado a R$ {stock.Price:F2}, " +
-            $"abaixo do preco de referencia para compra (R$ {buyPrice:F2}).\n\n" +
-            $"Recomendacao: COMPRAR.\n" +
-            $"Cotacao obtida em: {stock.UpdatedAt:O}";
+            $"{stock.Symbol} is trading at R$ {stock.Price:F2}, " +
+            $"below the buy reference price (R$ {buyPrice:F2}).\n\n" +
+            $"Recommendation: BUY.\n" +
+            $"Quote retrieved at: {stock.UpdatedAt:O}";
 
         return SendAsync(subject, body, ct);
     }
 
     public Task SendSellAlertAsync(Stock stock, decimal sellPrice, CancellationToken ct = default)
     {
-        var subject = $"[StockQuoteAlert] Venda: {stock.Symbol}";
+        var subject = $"[StockQuoteAlert] Sell: {stock.Symbol}";
         var body =
-            $"O ativo {stock.Symbol} esta cotado a R$ {stock.Price:F2}, " +
-            $"acima do preco de referencia para venda (R$ {sellPrice:F2}).\n\n" +
-            $"Recomendacao: VENDER.\n" +
-            $"Cotacao obtida em: {stock.UpdatedAt:O}";
+            $"{stock.Symbol} is trading at R$ {stock.Price:F2}, " +
+            $"above the sell reference price (R$ {sellPrice:F2}).\n\n" +
+            $"Recommendation: SELL.\n" +
+            $"Quote retrieved at: {stock.UpdatedAt:O}";
 
         return SendAsync(subject, body, ct);
     }

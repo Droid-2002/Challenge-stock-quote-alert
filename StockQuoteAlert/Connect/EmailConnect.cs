@@ -62,7 +62,7 @@ public class EmailConnect
         catch (Exception ex)
         {
             // Keep the original error as InnerException to help debugging (auth, host, SSL...).
-            throw new SendEmailException("Nao foi possivel enviar o email.", ex);
+            throw new SendEmailException("Could not send the email.", ex);
         }
     }
 }
