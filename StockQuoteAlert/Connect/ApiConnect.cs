@@ -1,3 +1,4 @@
+using System.Net.Http.Headers;
 using StockQuoteAlert.Interfaces;
 
 namespace StockQuoteAlert.Connect;
@@ -10,13 +11,56 @@ public class ApiConnect
 
     public ApiConnect(ApiSettings settings)
     {
-        _settings = settings;
-        _http = new HttpClient { BaseAddress = new Uri(settings.BaseUrl) };
-    }
+        // Validate the settings before creating the HttpClient, so the app fails fast if misconfigured.
+        if (settings is null)
+        {
+            throw new ArgumentNullException(nameof(settings));
+        }
 
-    public Task<string> GetRawQuoteAsync(string symbol, CancellationToken ct = default)
+        if (string.IsNullOrWhiteSpace(settings.BaseUrl))
+        {
+            throw new ArgumentException(
+                "The API base URL is not configured.",
+                nameof(settings.BaseUrl));
+        }
+
+        if (!Uri.TryCreate(settings.BaseUrl, UriKind.Absolute, out var baseUri))
+        {
+            throw new ArgumentException(
+                "The API base URL must be a valid absolute URL.",
+                nameof(settings.BaseUrl));
+        }
+
+        _settings = settings;
+        _http = new HttpClient { BaseAddress = baseUri };
+    }
+    // Defining the method as async allows the caller to cancel it, with Ctrl+C in the monitoring loop.
+    public async Task<string> GetRawQuoteAsync(string symbol, CancellationToken ct = default)
     {
-        // request (symbol + token from _settings) and return the response body.
-        throw new NotImplementedException();
+        if (string.IsNullOrWhiteSpace(symbol))
+        {
+            throw new ArgumentException(
+                "The stock symbol must be provided.",
+                nameof(symbol));
+        }
+
+        // Normalize the symbol: trim whitespace and convert to uppercase.
+        var normalizedSymbol = symbol.Trim().ToUpperInvariant();
+        var encodedSymbol = Uri.EscapeDataString(normalizedSymbol);
+
+        // Gets the quote for a single symbol.
+        using var request = new HttpRequestMessage(HttpMethod.Get, encodedSymbol);
+
+        if (!string.IsNullOrWhiteSpace(_settings.Token))
+        {
+            request.Headers.Authorization =
+                new AuthenticationHeaderValue("Bearer", _settings.Token);
+        }
+
+        // Response is disposed by the caller, so it can read the content stream.
+        using var response = await _http.SendAsync(request, ct);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadAsStringAsync(ct);
     }
 }

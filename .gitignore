@@ -485,3 +485,4 @@ $RECYCLE.BIN/
 
 # Local config with secrets
 appsettings.json
+StockQuoteAlert/obj/project.assets.json
