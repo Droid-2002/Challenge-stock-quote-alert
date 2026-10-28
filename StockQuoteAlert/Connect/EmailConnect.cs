@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Mail;
+using StockQuoteAlert.Interfaces;
 using StockQuoteAlert.Models;
 
 namespace StockQuoteAlert.Connect;
@@ -12,7 +13,7 @@ public class SendEmailException : Exception
 }
 
 // Low-level SMTP access.
-public class EmailConnect
+public class EmailConnect : IEmailSender
 {
     private readonly SmtpClient _client;
 
@@ -43,15 +44,13 @@ public class EmailConnect
         };
     }
 
-    public async Task SendAsync(MailMessage message, CancellationToken ct = default)
+    public async Task SendAsync(string from, string to, string subject, string body, CancellationToken ct = default)
     {
-        if (message is null)
-        {
-            throw new ArgumentNullException(nameof(message));
-        }
-
         try
         {
+            // MailMessage is IDisposable, so dispose it after sending.
+            // Created inside the try: an invalid address (FormatException) also becomes a SendEmailException.
+            using var message = new MailMessage(from, to, subject, body);
             await _client.SendMailAsync(message, ct);
         }
         catch (OperationCanceledException)

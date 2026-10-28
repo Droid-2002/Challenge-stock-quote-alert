@@ -1,17 +1,16 @@
-using System.Net.Mail;
-using StockQuoteAlert.Connect;
+using StockQuoteAlert.Interfaces;
 using StockQuoteAlert.Models;
 
 namespace StockQuoteAlert.Services;
 
 // Builds and sends the buy/sell alert emails.
-// EmailConnect only knows how to deliver a MailMessage; this class decides what the message says.
+// IEmailSender only knows how to deliver an email; this class decides what the message says.
 public class EmailServices
 {
-    private readonly EmailConnect _email;
+    private readonly IEmailSender _sender;
     private readonly EmailSettings _settings;
 
-    public EmailServices(EmailConnect email, EmailSettings settings)
+    public EmailServices(IEmailSender sender, EmailSettings settings)
     {
         if (settings is null)
         {
@@ -28,7 +27,7 @@ public class EmailServices
             throw new ArgumentException("The recipient email (Email.To) is not configured.", nameof(settings.To));
         }
 
-        _email = email ?? throw new ArgumentNullException(nameof(email));
+        _sender = sender ?? throw new ArgumentNullException(nameof(sender));
         _settings = settings;
     }
 
@@ -56,10 +55,6 @@ public class EmailServices
         return SendAsync(subject, body, ct);
     }
 
-    private async Task SendAsync(string subject, string body, CancellationToken ct)
-    {
-        // MailMessage is IDisposable, so dispose it after sending.
-        using var message = new MailMessage(_settings.From, _settings.To, subject, body);
-        await _email.SendAsync(message, ct);
-    }
+    private Task SendAsync(string subject, string body, CancellationToken ct) =>
+        _sender.SendAsync(_settings.From, _settings.To, subject, body, ct);
 }
