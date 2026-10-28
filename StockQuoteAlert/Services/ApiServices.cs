@@ -1,4 +1,4 @@
-using StockQuoteAlert.Connect;
+using StockQuoteAlert.Interfaces;
 using StockQuoteAlert.Models;
 using System.Text.Json;
 
@@ -7,14 +7,14 @@ namespace StockQuoteAlert.Services;
 // Sits between the raw HTTP layer (ApiConnect) and the rest of the app.
 // ApiConnect only fetches the response text; this class turns it into a validated Stock.
 // If the API changes its format, this is the only class that needs to change.
-public class ApiServices
+public class ApiServices : IQuoteService
 {
-    private readonly ApiConnect _api;
-    // Validate the API connection before creating the service, so the app fails fast if misconfigured.
+    private readonly IQuoteApiClient _api;
 
-    public ApiServices(ApiConnect api)
+    public ApiServices(IQuoteApiClient api)
     {
-        _api = api;
+        // Null check: fail fast if the dependency is missing.
+        _api = api ?? throw new ArgumentNullException(nameof(api));
     }
 
     // Optional CancellationToken so the call can be interrupted

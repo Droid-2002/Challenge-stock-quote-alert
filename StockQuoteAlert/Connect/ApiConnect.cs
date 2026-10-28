@@ -1,10 +1,11 @@
 using System.Net.Http.Headers;
+using StockQuoteAlert.Interfaces;
 using StockQuoteAlert.Models;
 
 namespace StockQuoteAlert.Connect;
 
 // Low-level HTTP access to the quote API.
-public class ApiConnect
+public class ApiConnect : IQuoteApiClient
 {
     private readonly HttpClient _http;
     private readonly ApiSettings _settings;

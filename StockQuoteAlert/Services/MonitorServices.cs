@@ -1,3 +1,4 @@
+using StockQuoteAlert.Interfaces;
 using StockQuoteAlert.Models;
 
 namespace StockQuoteAlert.Services;
@@ -5,7 +6,7 @@ namespace StockQuoteAlert.Services;
 // Monitoring loop: fetch quote -> evaluate -> send email when the state changes.
 public class MonitorServices
 {
-    private readonly ApiServices _api;
+    private readonly IQuoteService _api;
     private readonly EmailServices _email;
     private readonly AlertParameters _parameters;
     private readonly TimeSpan _interval;
@@ -13,7 +14,7 @@ public class MonitorServices
     // Last state that was already notified. Avoids sending the same alert on every check.
     private AlertState _lastState = AlertState.Neutral;
 
-    public MonitorServices(ApiServices api, EmailServices email, AlertParameters parameters, int intervalSeconds)
+    public MonitorServices(IQuoteService api, EmailServices email, AlertParameters parameters, int intervalSeconds)
     {
         if (intervalSeconds <= 0)
         {
