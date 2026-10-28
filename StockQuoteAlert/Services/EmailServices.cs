@@ -5,7 +5,7 @@ namespace StockQuoteAlert.Services;
 
 // Builds and sends the buy/sell alert emails.
 // IEmailSender only knows how to deliver an email; this class decides what the message says.
-public class EmailServices
+public class EmailServices : IAlertNotifier
 {
     private readonly IEmailSender _sender;
     private readonly EmailSettings _settings;
@@ -31,7 +31,7 @@ public class EmailServices
         _settings = settings;
     }
 
-    public Task SendBuyAlertAsync(Stock stock, decimal buyPrice, CancellationToken ct = default)
+    public Task NotifyBuyAsync(Stock stock, decimal buyPrice, CancellationToken ct = default)
     {
         var subject = $"[StockQuoteAlert] Buy: {stock.Symbol}";
         var body =
@@ -43,7 +43,7 @@ public class EmailServices
         return SendAsync(subject, body, ct);
     }
 
-    public Task SendSellAlertAsync(Stock stock, decimal sellPrice, CancellationToken ct = default)
+    public Task NotifySellAsync(Stock stock, decimal sellPrice, CancellationToken ct = default)
     {
         var subject = $"[StockQuoteAlert] Sell: {stock.Symbol}";
         var body =

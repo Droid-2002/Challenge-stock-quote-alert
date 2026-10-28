@@ -1,5 +1,6 @@
 ﻿using System.Text.Json;
 using StockQuoteAlert.Connect;
+using StockQuoteAlert.Interfaces;
 using StockQuoteAlert.Models;
 using StockQuoteAlert.Services;
 
@@ -18,9 +19,14 @@ try
     var configPath = Path.Combine(AppContext.BaseDirectory, "appsettings.json");
     var config = AppConfig.Load(configPath);
 
-    var apiServices = new ApiServices(new ApiConnect(config.Api));
-    var emailServices = new EmailServices(new EmailConnect(config.Smtp), config.Email);
-    var monitor = new MonitorServices(apiServices, emailServices, parameters, config.Api.IntervalSeconds);
+    // Composition root: the only place that knows the concrete classes.
+    IQuoteApiClient apiClient = new ApiConnect(config.Api);
+    IQuoteService quoteService = new ApiServices(apiClient);
+
+    IEmailSender emailSender = new EmailConnect(config.Smtp);
+    IAlertNotifier notifier = new EmailServices(emailSender, config.Email);
+
+    var monitor = new MonitorServices(quoteService, notifier, parameters, config.Api.IntervalSeconds);
 
     Console.WriteLine(
         $"Monitoring {parameters.Symbol} every {config.Api.IntervalSeconds}s. " +

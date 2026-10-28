@@ -3,18 +3,18 @@ using StockQuoteAlert.Models;
 
 namespace StockQuoteAlert.Services;
 
-// Monitoring loop: fetch quote -> evaluate -> send email when the state changes.
+// Monitoring loop: fetch quote -> evaluate -> notify when the state changes.
 public class MonitorServices
 {
     private readonly IQuoteService _api;
-    private readonly EmailServices _email;
+    private readonly IAlertNotifier _notifier;
     private readonly AlertParameters _parameters;
     private readonly TimeSpan _interval;
 
     // Last state that was already notified. Avoids sending the same alert on every check.
     private AlertState _lastState = AlertState.Neutral;
 
-    public MonitorServices(IQuoteService api, EmailServices email, AlertParameters parameters, int intervalSeconds)
+    public MonitorServices(IQuoteService api, IAlertNotifier notifier, AlertParameters parameters, int intervalSeconds)
     {
         if (intervalSeconds <= 0)
         {
@@ -22,7 +22,7 @@ public class MonitorServices
         }
 
         _api = api ?? throw new ArgumentNullException(nameof(api));
-        _email = email ?? throw new ArgumentNullException(nameof(email));
+        _notifier = notifier ?? throw new ArgumentNullException(nameof(notifier));
         _parameters = parameters ?? throw new ArgumentNullException(nameof(parameters));
         _interval = TimeSpan.FromSeconds(intervalSeconds);
     }
@@ -39,7 +39,8 @@ public class MonitorServices
         while (await timer.WaitForNextTickAsync(ct));
     }
 
-    private async Task CheckOnceAsync(CancellationToken ct)
+    // internal (not private) so a test project can run a single check without the timer.
+    internal async Task CheckOnceAsync(CancellationToken ct)
     {
         try
         {
@@ -55,12 +56,12 @@ public class MonitorServices
 
             if (state == AlertState.Sell)
             {
-                await _email.SendSellAlertAsync(stock, _parameters.SellPrice, ct);
+                await _notifier.NotifySellAsync(stock, _parameters.SellPrice, ct);
                 Log("SELL email sent.");
             }
             else if (state == AlertState.Buy)
             {
-                await _email.SendBuyAlertAsync(stock, _parameters.BuyPrice, ct);
+                await _notifier.NotifyBuyAsync(stock, _parameters.BuyPrice, ct);
                 Log("BUY email sent.");
             }
 
