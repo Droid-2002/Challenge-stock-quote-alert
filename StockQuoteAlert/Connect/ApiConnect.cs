@@ -1,5 +1,5 @@
 using System.Net.Http.Headers;
-using StockQuoteAlert.Interfaces;
+using StockQuoteAlert.Models;
 
 namespace StockQuoteAlert.Connect;
 

@@ -1,5 +1,5 @@
 using StockQuoteAlert.Connect;
-using StockQuoteAlert.Interfaces;
+using StockQuoteAlert.Models;
 using System.Text.Json;
 
 namespace StockQuoteAlert.Services;

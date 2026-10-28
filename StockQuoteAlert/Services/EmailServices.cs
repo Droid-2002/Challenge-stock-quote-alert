@@ -1,6 +1,6 @@
 using System.Net.Mail;
 using StockQuoteAlert.Connect;
-using StockQuoteAlert.Interfaces;
+using StockQuoteAlert.Models;
 
 namespace StockQuoteAlert.Services;
 

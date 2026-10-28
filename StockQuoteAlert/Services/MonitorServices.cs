@@ -1,4 +1,4 @@
-using StockQuoteAlert.Interfaces;
+using StockQuoteAlert.Models;
 
 namespace StockQuoteAlert.Services;
 

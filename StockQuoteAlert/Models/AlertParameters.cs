@@ -1,6 +1,6 @@
 using System.Globalization;
 
-namespace StockQuoteAlert.Interfaces;
+namespace StockQuoteAlert.Models;
 
 // The 3 command line parameters.
 // Validation is done in the Parse method, which guarantees that:

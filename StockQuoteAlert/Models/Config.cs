@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace StockQuoteAlert.Interfaces;
+namespace StockQuoteAlert.Models;
 
 public class AppConfig
 {

@@ -1,6 +1,6 @@
 ﻿using System.Text.Json;
 using StockQuoteAlert.Connect;
-using StockQuoteAlert.Interfaces;
+using StockQuoteAlert.Models;
 using StockQuoteAlert.Services;
 
 // Ctrl+C cancels the token instead of killing the process, so the loop ends cleanly.
