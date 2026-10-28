@@ -5,12 +5,14 @@
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-      <AssemblyName>stock-quote-alert</AssemblyName>
-  <RootNamespace>StockQuoteAlert</RootNamespace>
+    <AssemblyName>stock-quote-alert</AssemblyName>
+    <RootNamespace>StockQuoteAlert</RootNamespace>
   </PropertyGroup>
-<ItemGroup>
-  <None Update="appsettings.json">
-    <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-  </None>
-</ItemGroup>
+
+  <ItemGroup>
+    <None Update="appsettings.json">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
 </Project>
