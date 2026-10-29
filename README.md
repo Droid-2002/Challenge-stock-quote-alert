@@ -18,6 +18,7 @@ stock-quote-alert PETR4 22.67 22.59
 - Keeps running on network, API or SMTP failures; a failed email is retried on the next check
 - Clean shutdown with `Ctrl+C`
 - Input and configuration validated before any request (clear messages, exit code `1`)
+- Unit tests (xUnit) run automatically by GitHub Actions on every push and pull request to `main`
 
 ## Setup
 
@@ -45,27 +46,6 @@ Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
 
 Quotes come from the public **Yahoo Finance chart endpoint**. No account or token is needed.
 
-```
-GET https://query1.finance.yahoo.com/v8/finance/chart/PETR4.SA?interval=1d&range=1d
-```
-
-The application reads `chart.result[0].meta`:
-
-| Field | Used as |
-| --- | --- |
-| `symbol` | Symbol shown in the log and in the email (e.g. `PETR4.SA`) |
-| `regularMarketPrice` | Current price compared with the sell/buy thresholds |
-| `regularMarketTime` | Time of the quote (Unix seconds), shown in the email |
-
-If the symbol does not exist, Yahoo answers `404` with `chart.error` ("No data found, symbol may be delisted"). The error is logged and monitoring continues.
-
-| `Api` key | Default | Description |
-| --- | --- | --- |
-| `BaseUrl` | `https://query1.finance.yahoo.com/v8/finance/chart/` | Endpoint; a missing trailing `/` is added automatically |
-| `SymbolSuffix` | `.SA` | Appended to the ticker: Yahoo lists B3 stocks as `PETR4.SA`. Not added if the ticker already has a suffix. Use `""` for other markets (e.g. `AAPL`) |
-| `UserAgent` | `stock-quote-alert/1.0` | Sent on every request; Yahoo rejects requests without a User-Agent (`429`) |
-| `IntervalSeconds` | `60` | Seconds between checks |
-
 > **Note:** this endpoint is public but not officially documented or supported by Yahoo, so it may change or be rate limited without notice. Only `Connect/ApiConnect.cs` (request) and `Services/ApiServices.cs` (JSON parsing) depend on it.
 
 ## Usage
@@ -77,7 +57,7 @@ The application takes 3 arguments: `[stock] [sell_price] [buy_price]`. Use a dot
 dotnet run -- PETR4 22.67 22.59
 ```
 
-**As an executable**, as in the challenge statement:
+**As an executable**:
 ```bash
 dotnet publish -c Release -o ../publish
 cd ../publish
@@ -86,6 +66,23 @@ cd ../publish
 Keep the filled-in `appsettings.json` next to the executable.
 
 To stop the application, press `Ctrl+C`.
+
+## Tests and CI
+
+The `StockQuoteAlert.Tests` project (xUnit) covers argument parsing, configuration loading, the alert rule, the Yahoo request and JSON parsing, the email content and the monitoring loop (no duplicate alerts, retry after an email failure, recovery after an API failure, `Ctrl+C`). The API and SMTP layers are replaced by in-memory fakes, so the tests need no network, no credentials and no `appsettings.json`.
+
+Run them from the repository root:
+```bash
+dotnet test
+```
+
+**Continuous integration:** the GitHub Actions workflow [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs on every push and pull request to `main`, on `ubuntu-latest` with .NET 10:
+
+1. `dotnet restore`
+2. `dotnet build --no-restore -c Release`
+3. `dotnet test --no-build -c Release`
+
+A build error or a failing test fails the workflow; the badge at the top of this README shows the status of the last run.
 
 ## API Credits and references
 
