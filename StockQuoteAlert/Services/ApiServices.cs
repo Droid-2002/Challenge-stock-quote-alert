@@ -20,7 +20,7 @@ public class ApiServices : IQuoteService
     // Optional CancellationToken so the call can be interrupted
     public async Task<Stock> GetQuoteAsync(string symbol, CancellationToken ct = default)
     {
-        // Validate before the request: avoids wasting API quota.
+        // Validate before the request: avoids a useless call.
         if (string.IsNullOrWhiteSpace(symbol))
         {
             throw new ArgumentException("The stock symbol cannot be empty.", nameof(symbol));
@@ -29,21 +29,32 @@ public class ApiServices : IQuoteService
         var raw = await _api.GetRawQuoteAsync(symbol, ct);
 
         // Parse the JSON document to validate each field before using it.
+        // Expected shape: { "chart": { "result": [ { "meta": { "symbol", "regularMarketPrice", "regularMarketTime" } } ], "error": null } }
         using var document = JsonDocument.Parse(raw);
 
-        // The API returns "results" as an array even for a single ticker.
-        if (!document.RootElement.TryGetProperty("results", out var results) ||
+        if (!document.RootElement.TryGetProperty("chart", out var chart) || chart.ValueKind != JsonValueKind.Object)
+        {
+            throw new InvalidOperationException("The quote response does not contain a chart.");
+        }
+
+        // Yahoo reports problems (e.g. unknown symbol) in chart.error.
+        if (chart.TryGetProperty("error", out var error) && error.ValueKind == JsonValueKind.Object)
+        {
+            var description = error.TryGetProperty("description", out var d) ? d.GetString() : null;
+            throw new InvalidOperationException($"The quote API returned an error: {description ?? "unknown error"}.");
+        }
+
+        if (!chart.TryGetProperty("result", out var results) ||
             results.ValueKind != JsonValueKind.Array ||
-            results.GetArrayLength() == 0)
+            results.GetArrayLength() == 0 ||
+            !results[0].TryGetProperty("meta", out var meta) ||
+            meta.ValueKind != JsonValueKind.Object)
         {
             throw new InvalidOperationException("The quote response does not contain any results.");
         }
 
-        // We request a single symbol, so the first item is the one we want.
-        var result = results[0];
-
-        // Use the symbol returned by the API, not the one requested.
-        if (!result.TryGetProperty("symbol", out var symbolElement) ||
+        // Use the symbol returned by the API (e.g. "PETR4.SA"), not the one requested.
+        if (!meta.TryGetProperty("symbol", out var symbolElement) ||
             symbolElement.ValueKind != JsonValueKind.String ||
             string.IsNullOrWhiteSpace(symbolElement.GetString()))
         {
@@ -51,13 +62,18 @@ public class ApiServices : IQuoteService
         }
 
         // decimal instead of double to avoid rounding errors when comparing the price against the buy/sell thresholds.
-        if (!result.TryGetProperty("regularMarketPrice", out var priceElement) ||
+        if (!meta.TryGetProperty("regularMarketPrice", out var priceElement) ||
             !priceElement.TryGetDecimal(out var price) ||
             price <= 0)
         {
             throw new InvalidOperationException("The quote response does not contain a valid market price.");
         }
 
-        return new Stock(symbolElement.GetString()!, price, DateTime.UtcNow);
+        // Time of the quote (Unix seconds). Falls back to now if missing.
+        var updatedAt = meta.TryGetProperty("regularMarketTime", out var timeElement) && timeElement.TryGetInt64(out var unix)
+            ? DateTimeOffset.FromUnixTimeSeconds(unix).UtcDateTime
+            : DateTime.UtcNow;
+
+        return new Stock(symbolElement.GetString()!, price, updatedAt);
     }
 }

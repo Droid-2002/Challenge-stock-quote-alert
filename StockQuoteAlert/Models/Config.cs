@@ -39,9 +39,10 @@ public class SmtpSettings // SMTP settings for sending email alerts.
     public string Password { get; set; } = "";
 }
 
-public class ApiSettings // API settings for fetching stock quotes.
+public class ApiSettings // Yahoo Finance chart API settings for fetching stock quotes.
 {
-    public string BaseUrl { get; set; } = ""; 
-    public string Token { get; set; } = "";
+    public string BaseUrl { get; set; } = "https://query1.finance.yahoo.com/v8/finance/chart/";
+    public string SymbolSuffix { get; set; } = ".SA"; // Yahoo lists B3 stocks as PETR4.SA
+    public string UserAgent { get; set; } = "stock-quote-alert/1.0"; // Yahoo rejects requests without one
     public int IntervalSeconds { get; set; } = 60; // Default to 60 seconds between API calls.
 }

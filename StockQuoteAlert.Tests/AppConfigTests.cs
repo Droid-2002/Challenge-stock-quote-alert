@@ -20,7 +20,7 @@ public class AppConfigTests : IDisposable
             {
               "email": { "from": "a@x.com", "to": "b@x.com" },
               "smtp":  { "host": "smtp.x.com", "port": 465, "enableSsl": false, "user": "u", "password": "p" },
-              "api":   { "baseUrl": "https://brapi.dev/api/quote/", "token": "t", "intervalSeconds": 30 }
+              "api":   { "baseUrl": "https://example.com/chart/", "symbolSuffix": "", "userAgent": "ua", "intervalSeconds": 30 }
             }
             """);
 
@@ -31,8 +31,9 @@ public class AppConfigTests : IDisposable
         Assert.Equal("smtp.x.com", config.Smtp.Host);
         Assert.Equal(465, config.Smtp.Port);
         Assert.False(config.Smtp.EnableSsl);
-        Assert.Equal("https://brapi.dev/api/quote/", config.Api.BaseUrl);
-        Assert.Equal("t", config.Api.Token);
+        Assert.Equal("https://example.com/chart/", config.Api.BaseUrl);
+        Assert.Equal("", config.Api.SymbolSuffix);
+        Assert.Equal("ua", config.Api.UserAgent);
         Assert.Equal(30, config.Api.IntervalSeconds);
     }
 
@@ -46,6 +47,8 @@ public class AppConfigTests : IDisposable
         Assert.Equal(587, config.Smtp.Port);
         Assert.True(config.Smtp.EnableSsl);
         Assert.Equal(60, config.Api.IntervalSeconds);
+        Assert.Equal("https://query1.finance.yahoo.com/v8/finance/chart/", config.Api.BaseUrl);
+        Assert.Equal(".SA", config.Api.SymbolSuffix);
         Assert.Equal("", config.Email.From);
     }
 

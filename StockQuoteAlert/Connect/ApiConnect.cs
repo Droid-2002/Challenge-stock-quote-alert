@@ -1,10 +1,10 @@
-using System.Net.Http.Headers;
 using StockQuoteAlert.Interfaces;
 using StockQuoteAlert.Models;
 
 namespace StockQuoteAlert.Connect;
 
-// Low-level HTTP access to the quote API.
+// Low-level HTTP access to the Yahoo Finance chart API:
+// GET {BaseUrl}{SYMBOL}{SymbolSuffix}?interval=1d&range=1d
 public class ApiConnect : IQuoteApiClient
 {
     private readonly HttpClient _http;
@@ -28,7 +28,7 @@ public class ApiConnect : IQuoteApiClient
                 nameof(settings.BaseUrl));
         }
 
-        // Without the trailing "/", "https://brapi.dev/api/quote" + "PETR4" would become ".../api/PETR4".
+        // Without the trailing "/", ".../v8/finance/chart" + "PETR4.SA" would become ".../v8/finance/PETR4.SA".
         var baseUrl = settings.BaseUrl.EndsWith('/') ? settings.BaseUrl : settings.BaseUrl + "/";
 
         if (!Uri.TryCreate(baseUrl, UriKind.Absolute, out var baseUri))
@@ -40,7 +40,14 @@ public class ApiConnect : IQuoteApiClient
 
         _settings = settings;
         _http = new HttpClient(handler ?? throw new ArgumentNullException(nameof(handler))) { BaseAddress = baseUri };
+
+        // Yahoo answers 429 to requests without a User-Agent.
+        if (!string.IsNullOrWhiteSpace(settings.UserAgent))
+        {
+            _http.DefaultRequestHeaders.UserAgent.ParseAdd(settings.UserAgent);
+        }
     }
+
     // Defining the method as async allows the caller to cancel it, with Ctrl+C in the monitoring loop.
     public async Task<string> GetRawQuoteAsync(string symbol, CancellationToken ct = default)
     {
@@ -51,23 +58,25 @@ public class ApiConnect : IQuoteApiClient
                 nameof(symbol));
         }
 
-        // Normalize the symbol: trim whitespace and convert to uppercase.
-        var normalizedSymbol = symbol.Trim().ToUpperInvariant();
-        var encodedSymbol = Uri.EscapeDataString(normalizedSymbol);
+        var yahooSymbol = ToYahooSymbol(symbol);
 
-        // Gets the quote for a single symbol.
-        using var request = new HttpRequestMessage(HttpMethod.Get, encodedSymbol);
-
-        if (!string.IsNullOrWhiteSpace(_settings.Token))
-        {
-            request.Headers.Authorization =
-                new AuthenticationHeaderValue("Bearer", _settings.Token);
-        }
+        // range=1d: only today's data; the current price is in chart.result[0].meta.
+        using var request = new HttpRequestMessage(
+            HttpMethod.Get, $"{Uri.EscapeDataString(yahooSymbol)}?interval=1d&range=1d");
 
         // The response is disposed at the end of this method, after the content is read.
         using var response = await _http.SendAsync(request, ct);
         response.EnsureSuccessStatusCode();
 
         return await response.Content.ReadAsStringAsync(ct);
+    }
+
+    // "petr4" -> "PETR4.SA". A symbol that already has a suffix ("AAPL" with SymbolSuffix "", "PETR4.SA") is kept.
+    private string ToYahooSymbol(string symbol)
+    {
+        var normalized = symbol.Trim().ToUpperInvariant();
+        var suffix = _settings.SymbolSuffix?.Trim().ToUpperInvariant() ?? "";
+
+        return normalized.Contains('.') ? normalized : normalized + suffix;
     }
 }

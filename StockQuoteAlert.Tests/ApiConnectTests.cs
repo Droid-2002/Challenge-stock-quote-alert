@@ -6,60 +6,60 @@ namespace StockQuoteAlert.Tests;
 
 public class ApiConnectTests
 {
-    private static ApiSettings Settings(string baseUrl, string token = "") =>
-        new() { BaseUrl = baseUrl, Token = token };
+    private const string Yahoo = "https://query1.finance.yahoo.com/v8/finance/chart/";
+
+    private static ApiSettings Settings(string baseUrl = Yahoo, string suffix = ".SA", string userAgent = "stock-quote-alert/1.0") =>
+        new() { BaseUrl = baseUrl, SymbolSuffix = suffix, UserAgent = userAgent };
+
+    private static async Task<HttpRequestMessage> SendAndCapture(ApiSettings settings, string symbol)
+    {
+        var handler = new FakeHttpHandler(HttpStatusCode.OK, "{}");
+        await new ApiConnect(settings, handler).GetRawQuoteAsync(symbol);
+        return handler.LastRequest!;
+    }
 
     [Theory]
-    [InlineData("https://brapi.dev/api/quote/")]
-    [InlineData("https://brapi.dev/api/quote")] // without the trailing "/" the URL must stay the same
-    public async Task GetRawQuoteAsync_BuildsUrlWithSymbol(string baseUrl)
+    [InlineData(Yahoo)]
+    [InlineData("https://query1.finance.yahoo.com/v8/finance/chart")] // without the trailing "/" the URL must stay the same
+    public async Task GetRawQuoteAsync_BuildsYahooUrl(string baseUrl)
     {
-        var handler = new FakeHttpHandler(HttpStatusCode.OK, "{}");
-        var api = new ApiConnect(Settings(baseUrl), handler);
+        var request = await SendAndCapture(Settings(baseUrl), " petr4 ");
 
-        await api.GetRawQuoteAsync(" petr4 ");
+        Assert.Equal(Yahoo + "PETR4.SA?interval=1d&range=1d", request.RequestUri!.ToString());
+        Assert.Equal(HttpMethod.Get, request.Method);
+    }
 
-        Assert.Equal("https://brapi.dev/api/quote/PETR4", handler.LastRequest!.RequestUri!.ToString());
-        Assert.Equal(HttpMethod.Get, handler.LastRequest.Method);
+    [Theory]
+    [InlineData("PETR4.SA", ".SA", "PETR4.SA")] // suffix already present: not duplicated
+    [InlineData("AAPL", "", "AAPL")]            // no suffix configured
+    [InlineData("vale3", ".sa", "VALE3.SA")]
+    public async Task GetRawQuoteAsync_AppliesSymbolSuffix(string symbol, string suffix, string expected)
+    {
+        var request = await SendAndCapture(Settings(suffix: suffix), symbol);
+        Assert.Equal(Yahoo + expected + "?interval=1d&range=1d", request.RequestUri!.ToString());
     }
 
     [Fact]
-    public async Task GetRawQuoteAsync_WithToken_SendsBearerHeader()
+    public async Task GetRawQuoteAsync_SendsUserAgent()
     {
-        var handler = new FakeHttpHandler(HttpStatusCode.OK, "{}");
-        var api = new ApiConnect(Settings("https://brapi.dev/api/quote/", "abc"), handler);
-
-        await api.GetRawQuoteAsync("PETR4");
-
-        Assert.Equal("Bearer", handler.LastRequest!.Headers.Authorization!.Scheme);
-        Assert.Equal("abc", handler.LastRequest.Headers.Authorization.Parameter);
-    }
-
-    [Fact]
-    public async Task GetRawQuoteAsync_WithoutToken_SendsNoAuthHeader()
-    {
-        var handler = new FakeHttpHandler(HttpStatusCode.OK, "{}");
-        var api = new ApiConnect(Settings("https://brapi.dev/api/quote/"), handler);
-
-        await api.GetRawQuoteAsync("PETR4");
-
-        Assert.Null(handler.LastRequest!.Headers.Authorization);
+        var request = await SendAndCapture(Settings(), "PETR4");
+        Assert.Contains("stock-quote-alert/1.0", request.Headers.UserAgent.ToString());
     }
 
     [Fact]
     public async Task GetRawQuoteAsync_ReturnsBody()
     {
-        var api = new ApiConnect(Settings("https://brapi.dev/api/quote/"), new FakeHttpHandler(HttpStatusCode.OK, "body"));
+        var api = new ApiConnect(Settings(), new FakeHttpHandler(HttpStatusCode.OK, "body"));
         Assert.Equal("body", await api.GetRawQuoteAsync("PETR4"));
     }
 
     [Theory]
-    [InlineData(HttpStatusCode.NotFound)]
-    [InlineData(HttpStatusCode.Unauthorized)]
+    [InlineData(HttpStatusCode.NotFound)]           // unknown symbol
+    [InlineData(HttpStatusCode.TooManyRequests)]    // rate limit
     [InlineData(HttpStatusCode.InternalServerError)]
     public async Task GetRawQuoteAsync_HttpError_Throws(HttpStatusCode status)
     {
-        var api = new ApiConnect(Settings("https://brapi.dev/api/quote/"), new FakeHttpHandler(status, ""));
+        var api = new ApiConnect(Settings(), new FakeHttpHandler(status, ""));
         await Assert.ThrowsAsync<HttpRequestException>(() => api.GetRawQuoteAsync("PETR4"));
     }
 
@@ -72,7 +72,7 @@ public class ApiConnectTests
     [Fact]
     public async Task GetRawQuoteAsync_EmptySymbol_Throws()
     {
-        var api = new ApiConnect(Settings("https://brapi.dev/api/quote/"), new FakeHttpHandler(HttpStatusCode.OK, "{}"));
+        var api = new ApiConnect(Settings(), new FakeHttpHandler(HttpStatusCode.OK, "{}"));
         await Assert.ThrowsAsync<ArgumentException>(() => api.GetRawQuoteAsync(""));
     }
 }
