@@ -2,7 +2,7 @@
 
 > **Note:** This project was developed as part of a selective process.
 
-![CI](https://github.com/SEU_USUARIO/SEU_REPO/actions/workflows/ci.yml/badge.svg)
+![CI](https://github.com/Droid-2002/Challenge-stock-quote-alert/actions/workflows/ci.yml/badge.svg)
 
 A .NET 10 console application that continuously monitors a B3 stock and sends an email alert when the price rises above a **sell** threshold or drops below a **buy** threshold.
 
