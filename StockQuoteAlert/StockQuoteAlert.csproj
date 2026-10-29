@@ -10,6 +10,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <!-- Lets the test project call internal members (MonitorServices.CheckOnceAsync, ApiConnect test constructor). -->
+    <InternalsVisibleTo Include="StockQuoteAlert.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Update="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
