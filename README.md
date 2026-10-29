@@ -83,3 +83,9 @@ I used AI as a research tool to compare best approaches for the project, testing
 ### Documentation
 
 The structure of this README (run instructions and reference list) was organized with an AI from my notes and the project code. The reference links were checked.
+
+### Tests and CI (GitHub Actions)
+
+An LLM was used as support in the testing and CI part. The structure and the logic are my own: I created the xUnit test project and the solution, set up the GitHub Actions workflow (restore, build and test on every push and pull request to `main`), and designed the code around interfaces so that the API and email layers could be replaced by fakes in the tests.
+
+The LLM proposed some of the test cases, mainly edge cases (invalid prices and arguments, malformed API responses, prices exactly equal to the thresholds, email failures followed by a retry). Every suggested test was reviewed, adjusted and run by me before being kept.
