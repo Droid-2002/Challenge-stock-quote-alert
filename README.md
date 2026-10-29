@@ -35,10 +35,38 @@ Requires the [.NET 10 SDK](https://dotnet.microsoft.com/download).
   "Email": { "From": "sender@gmail.com", "To": "alerts@example.com" },
   "Smtp":  { "Host": "smtp.gmail.com", "Port": 587, "EnableSsl": true,
              "User": "sender@gmail.com", "Password": "app-password" },
-  "Api":   { "BaseUrl": "https://brapi.dev/api/quote/", "Token": "", "IntervalSeconds": 60 }
+  "Api":   { "BaseUrl": "https://query1.finance.yahoo.com/v8/finance/chart/",
+             "SymbolSuffix": ".SA", "UserAgent": "stock-quote-alert/1.0", "IntervalSeconds": 60 }
 }
 ```
 > **Note:** `appsettings.json` is in `.gitignore`, so your credentials are never committed.
+
+### Quote API (Yahoo Finance)
+
+Quotes come from the public **Yahoo Finance chart endpoint**. No account or token is needed.
+
+```
+GET https://query1.finance.yahoo.com/v8/finance/chart/PETR4.SA?interval=1d&range=1d
+```
+
+The application reads `chart.result[0].meta`:
+
+| Field | Used as |
+| --- | --- |
+| `symbol` | Symbol shown in the log and in the email (e.g. `PETR4.SA`) |
+| `regularMarketPrice` | Current price compared with the sell/buy thresholds |
+| `regularMarketTime` | Time of the quote (Unix seconds), shown in the email |
+
+If the symbol does not exist, Yahoo answers `404` with `chart.error` ("No data found, symbol may be delisted"). The error is logged and monitoring continues.
+
+| `Api` key | Default | Description |
+| --- | --- | --- |
+| `BaseUrl` | `https://query1.finance.yahoo.com/v8/finance/chart/` | Endpoint; a missing trailing `/` is added automatically |
+| `SymbolSuffix` | `.SA` | Appended to the ticker: Yahoo lists B3 stocks as `PETR4.SA`. Not added if the ticker already has a suffix. Use `""` for other markets (e.g. `AAPL`) |
+| `UserAgent` | `stock-quote-alert/1.0` | Sent on every request; Yahoo rejects requests without a User-Agent (`429`) |
+| `IntervalSeconds` | `60` | Seconds between checks |
+
+> **Note:** this endpoint is public but not officially documented or supported by Yahoo, so it may change or be rate limited without notice. Only `Connect/ApiConnect.cs` (request) and `Services/ApiServices.cs` (JSON parsing) depend on it.
 
 ## Usage
 
@@ -61,7 +89,7 @@ To stop the application, press `Ctrl+C`.
 
 ## API Credits and references
 
-- **Quote data:** [brapi.dev](https://brapi.dev/docs)
+- **Quote data:** [Yahoo Finance](https://finance.yahoo.com/) (public chart endpoint `query1.finance.yahoo.com/v8/finance/chart`)
 - **SMTP:** [`System.Net.Mail.SmtpClient`](https://learn.microsoft.com/dotnet/api/system.net.mail.smtpclient), [dotnet/runtime — System.Net.Mail](https://github.com/dotnet/runtime/tree/main/src/libraries/System.Net.Mail), [jstedfast/MailKit](https://github.com/jstedfast/MailKit).
 
 ## AI usage
